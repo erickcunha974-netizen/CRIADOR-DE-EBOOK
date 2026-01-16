@@ -4,7 +4,7 @@ import { MarkdownRenderer } from './components/MarkdownRenderer';
 import { generateOutline, generateChapterContent, generateMarketingImage, suggestImagePrompts } from './services/geminiService';
 import { ViewState, EbookProject, Chapter, GeneratedImage, Language } from './types';
 import { translations } from './translations';
-import { Wand2, Loader2, Save, Send, ImagePlus, Download, RefreshCw, LayoutTemplate, PenTool, ChevronRight, Languages, Key, FileText, Eye } from 'lucide-react';
+import { Wand2, Loader2, Save, Send, ImagePlus, Download, RefreshCw, LayoutTemplate, PenTool, ChevronRight, Languages, Key, FileText, Eye, ArrowRight } from 'lucide-react';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -12,30 +12,64 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 // Check if ENV key exists
 const envApiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
 
+// STORAGE KEYS
+const STORAGE_KEY_PROJECT = 'ebookgen_project';
+const STORAGE_KEY_API = 'gemini_api_key';
+const STORAGE_KEY_VIEW = 'ebookgen_view';
+
 export default function App() {
-  // State
-  const [view, setView] = useState<ViewState>(ViewState.ONBOARDING);
-  const [language, setLanguage] = useState<Language>('pt'); // Default to Portuguese for this user
-  const [project, setProject] = useState<EbookProject>({
-    businessName: '',
-    niche: '',
-    targetAudience: '',
-    chapters: [],
-    images: []
+  // --- STATE MANAGEMENT ---
+  
+  // Load Project from Storage or Default
+  const [project, setProject] = useState<EbookProject>(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(STORAGE_KEY_PROJECT);
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to load saved project", e);
+            }
+        }
+    }
+    return {
+        businessName: '',
+        niche: '',
+        targetAudience: '',
+        chapters: [],
+        images: []
+    };
   });
+
+  // Load View from Storage (so refresh stays on same page)
+  const [view, setView] = useState<ViewState>(() => {
+      if (typeof window !== 'undefined') {
+          const savedView = localStorage.getItem(STORAGE_KEY_VIEW);
+          if (savedView && Object.values(ViewState).includes(savedView as ViewState)) {
+              // If project is empty, force onboarding regardless of saved view
+              const savedProject = localStorage.getItem(STORAGE_KEY_PROJECT);
+              if (!savedProject || JSON.parse(savedProject).chapters.length === 0) {
+                  return ViewState.ONBOARDING;
+              }
+              return savedView as ViewState;
+          }
+      }
+      return ViewState.ONBOARDING;
+  });
+
+  const [language, setLanguage] = useState<Language>('pt'); 
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
   // API Key State
   const [manualApiKey, setManualApiKey] = useState(() => {
-    // Attempt to recover from local storage if window is defined
     if (typeof window !== 'undefined') {
-        return localStorage.getItem('gemini_api_key') || '';
+        return localStorage.getItem(STORAGE_KEY_API) || '';
     }
     return '';
   });
 
-  // Specific state for image generator
+  // Image Generator State
   const [imagePrompt, setImagePrompt] = useState('');
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
   const [activeImageTab, setActiveImageTab] = useState<'generate' | 'gallery'>('generate');
@@ -43,9 +77,25 @@ export default function App() {
   // Translations
   const t = translations[language];
 
-  // Helper to get effective key
+  // --- EFFECTS (PERSISTENCE) ---
+
+  // Auto-save project
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY_PROJECT, JSON.stringify(project));
+      }
+  }, [project]);
+
+  // Auto-save view
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_VIEW, view);
+    }
+  }, [view]);
+
+  // --- HANDLERS ---
+
   const getApiKey = () => {
-      // Prefer manual key if env key is missing or empty
       if (envApiKey && envApiKey.length > 0) return envApiKey;
       return manualApiKey;
   };
@@ -53,12 +103,27 @@ export default function App() {
   const handleManualKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
       setManualApiKey(val);
-      localStorage.setItem('gemini_api_key', val);
+      localStorage.setItem(STORAGE_KEY_API, val);
   };
 
-  // Handlers
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'pt' : 'en');
+  };
+
+  const handleResetProject = () => {
+      const emptyProject = {
+        businessName: '',
+        niche: '',
+        targetAudience: '',
+        chapters: [],
+        images: []
+      };
+      setProject(emptyProject);
+      setView(ViewState.ONBOARDING);
+      setSuggestedPrompts([]);
+      setImagePrompt('');
+      setCurrentChapterIndex(0);
+      localStorage.removeItem(STORAGE_KEY_PROJECT);
   };
 
   const handleStartProject = async () => {
@@ -80,6 +145,7 @@ export default function App() {
         isGenerating: false
       }));
       setProject(prev => ({ ...prev, chapters: newChapters }));
+      // Automatically go to Outline view, then user can go to editor
       setView(ViewState.OUTLINE);
     } catch (error: any) {
       console.error("Start Project Error:", error);
@@ -191,7 +257,8 @@ export default function App() {
       }
   }
 
-  // Views
+  // --- VIEW RENDERERS ---
+
   const renderOnboarding = () => (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 max-w-2xl mx-auto text-center animate-fade-in relative">
       <div className="absolute top-6 right-6">
@@ -213,9 +280,8 @@ export default function App() {
       </p>
       
       <div className="w-full max-w-md space-y-4 text-left">
-        {/* API Key Input Section - Only shows if ENV key is missing */}
         {!envApiKey && (
-             <div className="bg-slate-900/50 p-4 rounded-lg border border-yellow-500/20 mb-4">
+             <div className="bg-slate-900/50 p-4 rounded-lg border border-yellow-500/20 mb-4 shadow-lg shadow-black/20">
                 <label className="block text-xs font-semibold text-yellow-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Key size={12} />
                     {t.onboarding.apiKeyLabel}
@@ -230,6 +296,22 @@ export default function App() {
                 <p className="text-[10px] text-slate-500 mt-2">
                     {t.onboarding.apiKeyHelp}
                 </p>
+             </div>
+        )}
+
+        {/* If chapters exist, offer to continue */}
+        {project.chapters.length > 0 && (
+             <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-lg mb-4 flex items-center justify-between">
+                 <div className="text-sm">
+                     <p className="font-semibold text-white">{project.businessName}</p>
+                     <p className="text-emerald-400 text-xs">{project.chapters.length} chapters</p>
+                 </div>
+                 <button 
+                    onClick={() => setView(ViewState.OUTLINE)}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-2 rounded-md flex items-center gap-2"
+                 >
+                     {t.onboarding.continueBtn} <ArrowRight size={14} />
+                 </button>
              </div>
         )}
 
@@ -256,7 +338,7 @@ export default function App() {
         <button 
           onClick={handleStartProject}
           disabled={!project.businessName || !project.niche || isLoading || (!envApiKey && !manualApiKey)}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg mt-4 flex items-center justify-center gap-2 transition-all"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg mt-4 flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
         >
           {isLoading ? <Loader2 className="animate-spin" /> : <Wand2 size={18} />}
           {isLoading ? t.onboarding.loading : t.onboarding.button}
@@ -266,7 +348,7 @@ export default function App() {
   );
 
   const renderOutline = () => (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-4xl mx-auto p-8 animate-fade-in">
       <div className="mb-8 border-b border-slate-800 pb-6">
         <h2 className="text-3xl font-bold text-white mb-2">{t.outline.title}</h2>
         <p className="text-slate-400">{t.outline.subtitle}</p>
@@ -290,8 +372,9 @@ export default function App() {
                     setCurrentChapterIndex(idx);
                     setView(ViewState.EDITOR);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-white transition-opacity"
+                className="opacity-0 group-hover:opacity-100 p-2 text-emerald-400 hover:text-emerald-300 transition-opacity flex items-center gap-2 text-sm"
               >
+                <span>Edit</span>
                 <LayoutTemplate size={18} />
               </button>
             </div>
@@ -305,7 +388,7 @@ export default function App() {
                 setCurrentChapterIndex(0);
                 setView(ViewState.EDITOR);
             }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-emerald-900/20"
         >
             {t.outline.startWriting}
             <Send size={18} />
@@ -315,11 +398,19 @@ export default function App() {
   );
 
   const renderEditor = () => {
+    // Graceful handling if chapters are deleted or index is out of bounds
     const chapter = project.chapters[currentChapterIndex];
-    if (!chapter) return <div>No chapter selected</div>;
+    
+    if (!chapter) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <p>{t.editor.selectChapter}</p>
+            </div>
+        );
+    }
 
     return (
-      <div className="h-full flex flex-col w-full">
+      <div className="h-full flex flex-col w-full animate-fade-in">
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
           <div>
@@ -338,15 +429,17 @@ export default function App() {
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden">
+        {/* Content Area - SPLIT PANE */}
+        <div className="flex-1 overflow-hidden relative">
             {chapter.isGenerating ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <div className="absolute inset-0 bg-slate-950/80 z-20 flex flex-col items-center justify-center text-slate-500">
                     <Loader2 size={48} className="animate-spin text-emerald-500 mb-4" />
-                    <p className="animate-pulse">{t.editor.writing}</p>
+                    <p className="animate-pulse font-medium text-emerald-400">{t.editor.writing}</p>
                     <p className="text-xs mt-2 text-slate-600">{t.editor.usingModel}</p>
                 </div>
-            ) : chapter.content ? (
+            ) : null}
+
+            {chapter.content || chapter.isGenerating ? (
                 <div className="flex flex-col lg:flex-row h-full">
                     {/* Left: Editor */}
                     <div className="w-full lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900/30">
@@ -356,9 +449,10 @@ export default function App() {
                         </div>
                         <textarea 
                            className="flex-1 w-full bg-transparent p-6 resize-none focus:outline-none font-mono text-sm text-slate-300 leading-relaxed custom-scrollbar"
-                           value={chapter.content}
+                           value={chapter.content || ''}
                            onChange={(e) => handleChapterContentChange(e.target.value)}
                            spellCheck={false}
+                           placeholder="# Start writing or generate content..."
                         />
                     </div>
                     
@@ -370,7 +464,7 @@ export default function App() {
                         </div>
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                             <div className="prose prose-invert prose-emerald max-w-none">
-                                <MarkdownRenderer content={chapter.content} />
+                                <MarkdownRenderer content={chapter.content || ''} />
                             </div>
                         </div>
                     </div>
@@ -398,7 +492,7 @@ export default function App() {
   };
 
   const renderImages = () => (
-    <div className="h-full flex flex-col p-6 max-w-6xl mx-auto w-full">
+    <div className="h-full flex flex-col p-6 max-w-6xl mx-auto w-full animate-fade-in">
        <div className="mb-6 flex items-center justify-between">
             <div>
                 <h2 className="text-2xl font-bold text-white">{t.images.title}</h2>
@@ -510,7 +604,7 @@ export default function App() {
   );
 
   const renderExport = () => (
-      <div className="max-w-4xl mx-auto p-8 text-center">
+      <div className="max-w-4xl mx-auto p-8 text-center animate-fade-in">
           <div className="bg-emerald-500/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Download size={40} className="text-emerald-400" />
           </div>
@@ -554,6 +648,7 @@ export default function App() {
         currentChapterIndex={currentChapterIndex}
         language={language}
         onToggleLanguage={toggleLanguage}
+        onResetProject={handleResetProject}
       />
       
       <main className="flex-1 overflow-hidden relative flex flex-col">

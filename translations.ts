@@ -10,7 +10,9 @@ export const translations = {
       assetsSection: 'Assets',
       visuals: 'Visuals Generator',
       export: 'Export Book',
-      systemOnline: 'System Online'
+      systemOnline: 'System Online',
+      newProject: 'New Project',
+      resetConfirm: 'Are you sure? This will delete your current project.'
     },
     onboarding: {
       title: 'Start Your AI Growth Journey',
@@ -23,7 +25,8 @@ export const translations = {
       loading: 'Generating Structure...',
       apiKeyLabel: 'Gemini API Key',
       apiKeyPlace: 'Paste your API Key here',
-      apiKeyHelp: 'Required because no environment key was detected.'
+      apiKeyHelp: 'Required because no environment key was detected.',
+      continueBtn: 'Continue Previous Project'
     },
     outline: {
       title: 'Project Outline',
@@ -41,7 +44,8 @@ export const translations = {
       startGen: 'Start Generation',
       failed: 'Failed to generate content.',
       markdownInput: 'Markdown Editor',
-      preview: 'Live Preview'
+      preview: 'Live Preview',
+      selectChapter: 'Select a chapter from the sidebar to begin editing.'
     },
     images: {
       title: 'Visual Assets Generator',
@@ -79,7 +83,9 @@ export const translations = {
       assetsSection: 'Recursos',
       visuals: 'Gerador de Visual',
       export: 'Exportar Livro',
-      systemOnline: 'Sistema Online'
+      systemOnline: 'Sistema Online',
+      newProject: 'Novo Projeto',
+      resetConfirm: 'Tem certeza? Isso apagará seu projeto atual.'
     },
     onboarding: {
       title: 'Comece sua Jornada de Crescimento com IA',
@@ -92,7 +98,8 @@ export const translations = {
       loading: 'Gerando Estrutura...',
       apiKeyLabel: 'Chave API Gemini',
       apiKeyPlace: 'Cole sua Chave API aqui',
-      apiKeyHelp: 'Necessário pois nenhuma chave de ambiente foi detectada.'
+      apiKeyHelp: 'Necessário pois nenhuma chave de ambiente foi detectada.',
+      continueBtn: 'Continuar Projeto Anterior'
     },
     outline: {
       title: 'Esboço do Projeto',
@@ -110,7 +117,8 @@ export const translations = {
       startGen: 'Iniciar Geração',
       failed: 'Falha ao gerar conteúdo.',
       markdownInput: 'Editor Markdown',
-      preview: 'Pré-visualização'
+      preview: 'Pré-visualização',
+      selectChapter: 'Selecione um capítulo na barra lateral para começar a editar.'
     },
     images: {
       title: 'Gerador de Recursos Visuais',
