@@ -4,7 +4,7 @@ import { MarkdownRenderer } from './components/MarkdownRenderer';
 import { generateOutline, generateChapterContent, generateMarketingImage, suggestImagePrompts } from './services/geminiService';
 import { ViewState, EbookProject, Chapter, GeneratedImage, Language } from './types';
 import { translations } from './translations';
-import { Wand2, Loader2, Save, Send, ImagePlus, Download, RefreshCw, LayoutTemplate, PenTool, ChevronRight, Languages, Key } from 'lucide-react';
+import { Wand2, Loader2, Save, Send, ImagePlus, Download, RefreshCw, LayoutTemplate, PenTool, ChevronRight, Languages, Key, FileText, Eye } from 'lucide-react';
 
 // Utility to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -133,6 +133,14 @@ export default function App() {
       const errorMessage = error?.message || "Unknown error";
       alert(language === 'pt' ? `Erro ao gerar capítulo: ${errorMessage}` : `Error generating chapter: ${errorMessage}`);
     }
+  };
+
+  const handleChapterContentChange = (newContent: string) => {
+    setProject(prev => {
+        const newChapters = [...prev.chapters];
+        newChapters[currentChapterIndex].content = newContent;
+        return { ...prev, chapters: newChapters };
+    });
   };
 
   const handleGenerateImage = async () => {
@@ -311,8 +319,9 @@ export default function App() {
     if (!chapter) return <div>No chapter selected</div>;
 
     return (
-      <div className="h-full flex flex-col max-w-5xl mx-auto w-full">
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 backdrop-blur-md sticky top-0 z-10">
+      <div className="h-full flex flex-col w-full">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-emerald-500 uppercase tracking-wide">{t.editor.chapter} {currentChapterIndex + 1}</h2>
             <h1 className="text-2xl font-bold text-white">{chapter.title}</h1>
@@ -329,19 +338,45 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        {/* Content Area */}
+        <div className="flex-1 overflow-hidden">
             {chapter.isGenerating ? (
-                <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                <div className="flex flex-col items-center justify-center h-full text-slate-500">
                     <Loader2 size={48} className="animate-spin text-emerald-500 mb-4" />
                     <p className="animate-pulse">{t.editor.writing}</p>
                     <p className="text-xs mt-2 text-slate-600">{t.editor.usingModel}</p>
                 </div>
             ) : chapter.content ? (
-                <div className="prose prose-invert prose-emerald max-w-none">
-                    <MarkdownRenderer content={chapter.content} />
+                <div className="flex flex-col lg:flex-row h-full">
+                    {/* Left: Editor */}
+                    <div className="w-full lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900/30">
+                        <div className="p-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                           <FileText size={14} />
+                           {t.editor.markdownInput}
+                        </div>
+                        <textarea 
+                           className="flex-1 w-full bg-transparent p-6 resize-none focus:outline-none font-mono text-sm text-slate-300 leading-relaxed custom-scrollbar"
+                           value={chapter.content}
+                           onChange={(e) => handleChapterContentChange(e.target.value)}
+                           spellCheck={false}
+                        />
+                    </div>
+                    
+                    {/* Right: Preview */}
+                    <div className="w-full lg:w-1/2 flex flex-col bg-slate-950/50">
+                        <div className="p-3 border-b border-slate-800 bg-slate-900/50 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                           <Eye size={14} />
+                           {t.editor.preview}
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="prose prose-invert prose-emerald max-w-none">
+                                <MarkdownRenderer content={chapter.content} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed border-slate-800 rounded-xl p-12 text-center bg-slate-900/20">
+                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed border-slate-800 rounded-xl m-12 text-center bg-slate-900/20">
                     <div className="bg-slate-800 p-4 rounded-full mb-4">
                         <PenTool size={32} className="text-slate-400" />
                     </div>
@@ -521,7 +556,7 @@ export default function App() {
         onToggleLanguage={toggleLanguage}
       />
       
-      <main className="flex-1 overflow-hidden relative">
+      <main className="flex-1 overflow-hidden relative flex flex-col">
         {view === ViewState.OUTLINE && renderOutline()}
         {view === ViewState.EDITOR && renderEditor()}
         {view === ViewState.IMAGES && renderImages()}

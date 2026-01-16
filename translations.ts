@@ -39,7 +39,9 @@ export const translations = {
       ready: 'Ready to Write',
       aiAnalyze: (niche: string, title: string) => `AI will analyze your niche (${niche}) and generate a tailored chapter focusing on "${title}".`,
       startGen: 'Start Generation',
-      failed: 'Failed to generate content.'
+      failed: 'Failed to generate content.',
+      markdownInput: 'Markdown Editor',
+      preview: 'Live Preview'
     },
     images: {
       title: 'Visual Assets Generator',
@@ -106,7 +108,9 @@ export const translations = {
       ready: 'Pronto para Escrever',
       aiAnalyze: (niche: string, title: string) => `A IA analisará seu nicho (${niche}) e gerará um capítulo personalizado focado em "${title}".`,
       startGen: 'Iniciar Geração',
-      failed: 'Falha ao gerar conteúdo.'
+      failed: 'Falha ao gerar conteúdo.',
+      markdownInput: 'Editor Markdown',
+      preview: 'Pré-visualização'
     },
     images: {
       title: 'Gerador de Recursos Visuais',
